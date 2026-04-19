@@ -5,7 +5,7 @@ on:
     branches: [ "main", "de-rust-mainline" ]
   pull_request:
     branches: [ "main" ]
-workflow_dispatch:
+  workflow_dispatch:
 jobs:
   check-build-system:
     runs-on: ubuntu-latest
