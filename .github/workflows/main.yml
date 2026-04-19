@@ -1,4 +1,4 @@
-name: Kernel De-Rust Verification
+name: Kernel De-Rust & .deb Build
 
 on:
   push:
@@ -11,28 +11,22 @@ on:
           description: 'Reason for running'
           required: false
           default: 'Manual trigger'
+
 jobs:
-  check-build-system:
+  build-debian-packages:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
 
-      - name: Install Build Dependencies
+      - name: Install Build & Packaging Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            bc \
-            bison \
-            flex \
-            libelf-dev \
-            libssl-dev \
-            make \
-            gcc \
-            libc6-dev \
-            binutils \
-            dwarves
+            bc bison flex libelf-dev libssl-dev make gcc \
+            libc6-dev binutils dwarves kmod rsync \
+            debhelper fakeroot python3-minimal
 
       - name: Verify Rust Directory Removal
         run: |
@@ -40,19 +34,27 @@ jobs:
             echo "Error: rust/ directory still exists!"
             exit 1
           fi
-          echo "Success: rust/ directory is absent."
 
-      - name: Configure Kernel (defconfig)
-        run: make defconfig
-
-      - name: Check Kconfig for CONFIG_RUST
+      - name: Configure and Set Version
         run: |
-          if grep -q "CONFIG_RUST=y" .config; then
-            echo "Error: CONFIG_RUST found in .config!"
-            exit 1
-          fi
-          echo "Success: CONFIG_RUST is not present in the configuration."
+          make defconfig
+          # Set the custom version string
+          scripts/config --set-str LOCALVERSION "-rustless"
+          # Disable debug symbols to save disk space and build time
+          scripts/config --disable DEBUG_INFO
+          scripts/config --disable DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT
+          scripts/config --disable DEBUG_INFO_REDUCED
+          make olddefconfig
 
-      - name: Build Kernel Core (Sanity Check)
-        # We build only the core vmlinux to save time on GitHub's runners
-        run: make -j$(nproc) vmlinux
+      - name: Build Debian Packages
+        run: |
+          # bindeb-pkg generates the .deb files in the parent directory (..)
+          make -j$(nproc) bindeb-pkg
+
+      - name: Upload .deb Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-kernel-rustless-deb
+          # We look in the parent directory for the results
+          path: ../*.deb
+          if-no-files-found: error
