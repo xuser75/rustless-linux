@@ -1,0 +1,53 @@
+name: Kernel De-Rust Verification
+
+on:
+  push:
+    branches: [ "main", "de-rust-mainline" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  check-build-system:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc \
+            bison \
+            flex \
+            libelf-dev \
+            libssl-dev \
+            make \
+            gcc \
+            libc6-dev \
+            binutils \
+            dwarves
+
+      - name: Verify Rust Directory Removal
+        run: |
+          if [ -d "rust" ]; then
+            echo "Error: rust/ directory still exists!"
+            exit 1
+          fi
+          echo "Success: rust/ directory is absent."
+
+      - name: Configure Kernel (defconfig)
+        run: make defconfig
+
+      - name: Check Kconfig for CONFIG_RUST
+        run: |
+          if grep -q "CONFIG_RUST=y" .config; then
+            echo "Error: CONFIG_RUST found in .config!"
+            exit 1
+          fi
+          echo "Success: CONFIG_RUST is not present in the configuration."
+
+      - name: Build Kernel Core (Sanity Check)
+        # We build only the core vmlinux to save time on GitHub's runners
+        run: make -j$(nproc) vmlinux
