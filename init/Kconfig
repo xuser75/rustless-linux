@@ -60,43 +60,6 @@ config LLD_VERSION
 	default $(ld-version) if LD_IS_LLD
 	default 0
 
-config RUSTC_VERSION
-	int
-	default $(rustc-version)
-	help
-	  It does not depend on `RUST` since that one may need to use the version
-	  in a `depends on`.
-
-config RUST_IS_AVAILABLE
-	def_bool $(success,$(srctree)/scripts/rust_is_available.sh)
-	help
-	  This shows whether a suitable Rust toolchain is available (found).
-
-	  Please see Documentation/rust/quick-start.rst for instructions on how
-	  to satisfy the build requirements of Rust support.
-
-	  In particular, the Makefile target 'rustavailable' is useful to check
-	  why the Rust toolchain is not being detected.
-
-config RUSTC_LLVM_VERSION
-	int
-	default $(rustc-llvm-version)
-
-config RUSTC_LLVM_MAJOR_VERSION
-	int
-	default $(shell,expr $(rustc-llvm-version) / 10000)
-
-config RUSTC_CLANG_LLVM_COMPATIBLE
-	bool
-	default y if CC_IS_CLANG && RUSTC_LLVM_MAJOR_VERSION = $(shell,expr $(cc-version) / 10000)
-	help
-	  This indicates whether Rust and Clang use LLVM of the same major
-	  version.
-
-	  Operations involving handling LLVM IR or bitcode (e.g. cross-language
-	  LTO) require the same LLVM major version to work properly. For best
-	  compatibility it is recommended that the exact same LLVM is used.
-
 config ARCH_HAS_CC_CAN_LINK
 	bool
 
@@ -178,18 +141,6 @@ config LD_CAN_USE_KEEP_IN_OVERLAY
 	# https://github.com/llvm/llvm-project/pull/130661
 	def_bool LD_IS_BFD || LLD_VERSION >= 210000
 
-config RUSTC_HAS_SPAN_FILE
-	def_bool RUSTC_VERSION >= 108800
-
-config RUSTC_HAS_UNNECESSARY_TRANSMUTES
-	def_bool RUSTC_VERSION >= 108800
-
-config RUSTC_HAS_FILE_WITH_NUL
-	def_bool RUSTC_VERSION >= 108900
-
-config RUSTC_HAS_FILE_AS_C_STR
-	def_bool RUSTC_VERSION >= 109100
-
 config PAHOLE_VERSION
 	int
 	default "$(PAHOLE_VERSION)"
@@ -254,10 +205,9 @@ config WERROR
 	default COMPILE_TEST
 	help
 	  A kernel build should not cause any compiler warnings, and this
-	  enables the '-Werror' (for C) and '-Dwarnings' (for Rust) flags
-	  to enforce that rule by default. Certain warnings from other tools
-	  such as the linker may be upgraded to errors with this option as
-	  well.
+	  enables the '-Werror' (for C) flags to enforce that rule by default.
+	  Certain warnings from other tools such as the linker may be upgraded
+	  to errors with this option as well.
 
 	  However, if you have a new (or very old) compiler or linker with odd
 	  and unusual warnings, or you have some architecture with problems,
@@ -2186,43 +2136,6 @@ config PROFILING
 	help
 	  Say Y here to enable the extended profiling support mechanisms used
 	  by profilers.
-
-config RUST
-	bool "Rust support"
-	depends on HAVE_RUST
-	depends on RUST_IS_AVAILABLE
-	select EXTENDED_MODVERSIONS if MODVERSIONS
-	depends on !MODVERSIONS || GENDWARFKSYMS
-	depends on !GCC_PLUGIN_RANDSTRUCT
-	depends on !RANDSTRUCT
-	depends on !DEBUG_INFO_BTF || (PAHOLE_HAS_LANG_EXCLUDE && !LTO)
-	depends on !CFI || HAVE_CFI_ICALL_NORMALIZE_INTEGERS_RUSTC
-	select CFI_ICALL_NORMALIZE_INTEGERS if CFI
-	depends on !KASAN_SW_TAGS
-	help
-	  Enables Rust support in the kernel.
-
-	  This allows other Rust-related options, like drivers written in Rust,
-	  to be selected.
-
-	  It is also required to be able to load external kernel modules
-	  written in Rust.
-
-	  See Documentation/rust/ for more information.
-
-	  If unsure, say N.
-
-config RUSTC_VERSION_TEXT
-	string
-	depends on RUST
-	default "$(RUSTC_VERSION_TEXT)"
-	help
-	  See `CC_VERSION_TEXT`.
-
-config BINDGEN_VERSION_TEXT
-	string
-	depends on RUST
-	default "$(shell,$(BINDGEN) --version 2>/dev/null)"
 
 #
 # Place an empty function call at each tracepoint site. Can be
