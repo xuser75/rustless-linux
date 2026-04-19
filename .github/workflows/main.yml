@@ -65,24 +65,15 @@ jobs:
           scripts/config --disable RUST
           scripts/config --set-str LOCALVERSION "-rustless"
           
-          # STRIPPING & SIZE OPTIMIZATION
-          scripts/config --disable DEBUG_INFO
-          scripts/config --disable DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT
-          scripts/config --disable DEBUG_INFO_DWARF4
-          scripts/config --disable DEBUG_INFO_DWARF5
-          scripts/config --disable DEBUG_INFO_BTF
-          
           # Explicitly enable module stripping in the config
           scripts/config --enable MODULE_ALLOW_MISSING_WEB_SIGNATURES
-          scripts/config --set-val KBUILD_STRIP_ALL y
           
           # Finalize the configuration
           make olddefconfig
 
       - name: Build Debian Packages
         run: |
-          # INSTALL_MOD_STRIP=1 strips modules during the deb packaging phase
-          make -j$(nproc) bindeb-pkg INSTALL_MOD_STRIP=1
+          make -j$(nproc) bindeb-pkg
 
       - name: Move Packages for Upload
         run: |
