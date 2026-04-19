@@ -6,11 +6,11 @@ on:
   pull_request:
     branches: [ "master" ]
   workflow_dispatch:
-      inputs:
-        reason:
-          description: 'Reason for running'
-          required: false
-          default: 'Manual trigger'
+    inputs:
+      reason:
+        description: 'Reason for running'
+        required: false
+        default: 'Manual trigger'
 
 jobs:
   build-debian-packages:
@@ -19,6 +19,23 @@ jobs:
     steps:
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
+
+      - name: Maximize Disk Space
+        run: |
+          echo "Before cleanup:"
+          df -h .
+          
+          # Remove Android SDK, NDK, and .NET Runtimes
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          
+          # Optional: Remove other heavy hitters if needed
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo apt-get clean
+          
+          echo "After cleanup:"
+          df -h .
 
       - name: Install Build & Packaging Dependencies
         run: |
@@ -40,27 +57,34 @@ jobs:
         run: |
           cp debian_config .config
           
-          # This forces those lines to be empty strings even if they have paths
+          # Disable Trusted Keys
           scripts/config --set-str SYSTEM_TRUSTED_KEYS ""
           scripts/config --set-str SYSTEM_REVOCATION_KEYS ""
           
-          # Enforce your custom settings
+          # De-Rust and Versioning
           scripts/config --disable RUST
           scripts/config --set-str LOCALVERSION "-rustless"
           
-          # Save disk space on GitHub
+          # STRIPPING & SIZE OPTIMIZATION
           scripts/config --disable DEBUG_INFO
+          scripts/config --disable DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT
+          scripts/config --disable DEBUG_INFO_DWARF4
+          scripts/config --disable DEBUG_INFO_DWARF5
+          scripts/config --disable DEBUG_INFO_BTF
+          
+          # Explicitly enable module stripping in the config
+          scripts/config --enable MODULE_ALLOW_MISSING_WEB_SIGNATURES
+          scripts/config --set-val KBUILD_STRIP_ALL y
           
           # Finalize the configuration
           make olddefconfig
 
       - name: Build Debian Packages
         run: |
-          # bindeb-pkg generates the .deb files in the parent directory (..)
-          make -j$(nproc) bindeb-pkg
+          # INSTALL_MOD_STRIP=1 strips modules during the deb packaging phase
+          make -j$(nproc) bindeb-pkg INSTALL_MOD_STRIP=1
 
       - name: Move Packages for Upload
-        # Move the newly built packages into the current directory so GitHub can upload them securely
         run: |
           mv ../*.deb .
           echo "Files to be uploaded:"
@@ -70,6 +94,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-kernel-rustless-deb
-          # Securely upload the files from the current directory
           path: ./*.deb
           if-no-files-found: error
