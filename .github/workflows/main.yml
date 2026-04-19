@@ -2,9 +2,9 @@ name: Kernel De-Rust & .deb Build
 
 on:
   push:
-    branches: [ "main", "de-rust-mainline" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
   workflow_dispatch:
       inputs:
         reason:
@@ -27,7 +27,7 @@ jobs:
             bc bison flex libelf-dev libssl-dev make gcc \
             libc6-dev binutils dwarves kmod rsync \
             debhelper fakeroot python3-minimal \
-            build-essential libdw-dev  # <--- Added these two
+            build-essential libdw-dev
 
       - name: Verify Rust Directory Removal
         run: |
@@ -52,10 +52,17 @@ jobs:
           # bindeb-pkg generates the .deb files in the parent directory (..)
           make -j$(nproc) bindeb-pkg
 
+      - name: Move Packages for Upload
+        # Move the newly built packages into the current directory so GitHub can upload them securely
+        run: |
+          mv ../*.deb .
+          echo "Files to be uploaded:"
+          ls -lh *.deb
+
       - name: Upload .deb Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-kernel-rustless-deb
-          # We look in the parent directory for the results
-          path: ../*.deb
+          # Securely upload the files from the current directory
+          path: ./*.deb
           if-no-files-found: error
