@@ -26,7 +26,8 @@ jobs:
           sudo apt-get install -y \
             bc bison flex libelf-dev libssl-dev make gcc \
             libc6-dev binutils dwarves kmod rsync \
-            debhelper fakeroot python3-minimal
+            debhelper fakeroot python3-minimal \
+            build-essential libdw-dev  # <--- Added these two
 
       - name: Verify Rust Directory Removal
         run: |
