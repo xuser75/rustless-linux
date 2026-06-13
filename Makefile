@@ -119,15 +119,6 @@ endif
 
 export KBUILD_CHECKSRC
 
-# Enable "clippy" (a linter) as part of the Rust compilation.
-#
-# Use 'make CLIPPY=1' to enable it.
-ifeq ("$(origin CLIPPY)", "command line")
-  KBUILD_CLIPPY := $(CLIPPY)
-endif
-
-export KBUILD_CLIPPY
-
 # Use make M=dir or set the environment variable KBUILD_EXTMOD to specify the
 # directory of external module to build. Setting M= takes precedence.
 ifeq ("$(origin M)", "command line")
@@ -295,8 +286,7 @@ no-dot-config-targets := $(clean-targets) \
 			 cscope gtags TAGS tags help% %docs check% coccicheck \
 			 $(version_h) headers headers_% archheaders archscripts \
 			 %asm-generic kernelversion %src-pkg dt_binding_check \
-			 outputmakefile rustavailable rustfmt rustfmtcheck \
-			 run-command
+			 outputmakefile run-command
 no-sync-config-targets := $(no-dot-config-targets) %install modules_sign kernelrelease \
 			  image_name
 single-targets := %.a %.i %.ko %.lds %.ll %.lst %.mod %.o %.rsi %.s %/
@@ -458,7 +448,6 @@ else
 HOSTCC	= gcc
 HOSTCXX	= g++
 endif
-HOSTRUSTC = rustc
 HOSTPKG_CONFIG	= pkg-config
 
 # the KERNELDOC macro needs to be exported, as scripts/Makefile.build
@@ -471,45 +460,10 @@ KBUILD_USERHOSTCFLAGS := -Wall -Wmissing-prototypes -Wstrict-prototypes \
 KBUILD_USERCFLAGS  := $(KBUILD_USERHOSTCFLAGS) $(USERCFLAGS)
 KBUILD_USERLDFLAGS := $(USERLDFLAGS)
 
-# These flags apply to all Rust code in the tree, including the kernel and
-# host programs.
-export rust_common_flags := --edition=2021 \
-			    -Zbinary_dep_depinfo=y \
-			    -Astable_features \
-			    -Aunused_features \
-			    -Dnon_ascii_idents \
-			    -Dunsafe_op_in_unsafe_fn \
-			    -Wmissing_docs \
-			    -Wrust_2018_idioms \
-			    -Wunreachable_pub \
-			    -Wclippy::all \
-			    -Wclippy::as_ptr_cast_mut \
-			    -Wclippy::as_underscore \
-			    -Wclippy::cast_lossless \
-			    -Aclippy::collapsible_if \
-			    -Aclippy::collapsible_match \
-			    -Wclippy::ignored_unit_patterns \
-			    -Aclippy::incompatible_msrv \
-			    -Wclippy::mut_mut \
-			    -Wclippy::needless_bitwise_bool \
-			    -Aclippy::needless_lifetimes \
-			    -Wclippy::no_mangle_with_rust_abi \
-			    -Wclippy::ptr_as_ptr \
-			    -Wclippy::ptr_cast_constness \
-			    -Wclippy::ref_as_ptr \
-			    -Wclippy::undocumented_unsafe_blocks \
-			    -Aclippy::uninlined_format_args \
-			    -Wclippy::unnecessary_safety_comment \
-			    -Wclippy::unnecessary_safety_doc \
-			    -Wrustdoc::missing_crate_level_docs \
-			    -Wrustdoc::unescaped_backticks
-
 KBUILD_HOSTCFLAGS   := $(KBUILD_USERHOSTCFLAGS) $(HOST_LFS_CFLAGS) \
 		       $(HOSTCFLAGS) -I $(srctree)/scripts/include
 KBUILD_HOSTCXXFLAGS := -Wall -O2 $(HOST_LFS_CFLAGS) $(HOSTCXXFLAGS) \
 		       -I $(srctree)/scripts/include
-KBUILD_HOSTRUSTFLAGS := $(rust_common_flags) -O -Cstrip=debuginfo \
-			-Zallow-features=
 KBUILD_HOSTLDFLAGS  := $(HOST_LFS_LDFLAGS) $(HOSTLDFLAGS)
 KBUILD_HOSTLDLIBS   := $(HOST_LFS_LIBS) $(HOSTLDLIBS)
 KBUILD_PROCMACROLDFLAGS := $(or $(PROCMACROLDFLAGS),$(KBUILD_HOSTLDFLAGS))
@@ -536,9 +490,6 @@ OBJDUMP		= $(CROSS_COMPILE)objdump
 READELF		= $(CROSS_COMPILE)readelf
 STRIP		= $(CROSS_COMPILE)strip
 endif
-RUSTC		= rustc
-RUSTDOC		= rustdoc
-RUSTFMT		= rustfmt
 CLIPPY_DRIVER	= clippy-driver
 BINDGEN		= bindgen
 PAHOLE		= pahole
@@ -564,11 +515,9 @@ CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void -Wno-unknown-attribute $(CF)
 NOSTDINC_FLAGS :=
 CFLAGS_MODULE   =
-RUSTFLAGS_MODULE =
 AFLAGS_MODULE   =
 LDFLAGS_MODULE  =
 CFLAGS_KERNEL	=
-RUSTFLAGS_KERNEL =
 AFLAGS_KERNEL	=
 LDFLAGS_vmlinux =
 
@@ -600,42 +549,19 @@ KBUILD_CFLAGS += -fno-PIE
 KBUILD_CFLAGS += -fno-strict-aliasing
 
 KBUILD_CPPFLAGS := -D__KERNEL__
-KBUILD_RUSTFLAGS := $(rust_common_flags) \
-		    -Cpanic=abort -Cembed-bitcode=n -Clto=n \
-		    -Cforce-unwind-tables=n -Ccodegen-units=1 \
-		    -Csymbol-mangling-version=v0 \
-		    -Crelocation-model=static \
-		    -Zfunction-sections=n \
-		    -Wclippy::float_arithmetic
-KBUILD_RUSTFLAGS_OPTION_CHKS :=
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
-KBUILD_RUSTFLAGS_KERNEL :=
 KBUILD_AFLAGS_MODULE  := -DMODULE
 KBUILD_CFLAGS_MODULE  := -DMODULE
-KBUILD_RUSTFLAGS_MODULE := --cfg MODULE
 KBUILD_LDFLAGS_MODULE :=
 KBUILD_LDFLAGS :=
 CLANG_FLAGS :=
 
-ifeq ($(KBUILD_CLIPPY),1)
-	RUSTC_OR_CLIPPY_QUIET := CLIPPY
-	RUSTC_OR_CLIPPY = $(CLIPPY_DRIVER)
-else
-	RUSTC_OR_CLIPPY_QUIET := RUSTC
-	RUSTC_OR_CLIPPY = $(RUSTC)
-endif
-
 # Allows the usage of unstable features in stable compilers.
-export RUSTC_BOOTSTRAP := 1
-
-# Allows finding `.clippy.toml` in out-of-srctree builds.
-export CLIPPY_CONF_DIR := $(srctree)
 
 export ARCH SRCARCH CONFIG_SHELL BASH HOSTCC KBUILD_HOSTCFLAGS CROSS_COMPILE LD CC HOSTPKG_CONFIG
-export RUSTC RUSTDOC RUSTFMT RUSTC_OR_CLIPPY_QUIET RUSTC_OR_CLIPPY BINDGEN LLVM_LINK
-export HOSTRUSTC KBUILD_HOSTRUSTFLAGS
+export LLVM_LINK
 export CPP AR NM STRIP OBJCOPY OBJDUMP READELF PAHOLE RESOLVE_BTFIDS LEX YACC AWK INSTALLKERNEL
 export PERL PYTHON3 CHECK CHECKFLAGS MAKE UTS_MACHINE HOSTCXX
 export KGZIP KBZIP2 KLZOP LZMA LZ4 XZ ZSTD TAR
@@ -644,10 +570,9 @@ export KBUILD_USERCFLAGS KBUILD_USERLDFLAGS
 
 export KBUILD_CPPFLAGS NOSTDINC_FLAGS LINUXINCLUDE OBJCOPYFLAGS KBUILD_LDFLAGS
 export KBUILD_CFLAGS CFLAGS_KERNEL CFLAGS_MODULE
-export KBUILD_RUSTFLAGS RUSTFLAGS_KERNEL RUSTFLAGS_MODULE KBUILD_RUSTFLAGS_OPTION_CHKS
 export KBUILD_AFLAGS AFLAGS_KERNEL AFLAGS_MODULE
-export KBUILD_AFLAGS_MODULE KBUILD_CFLAGS_MODULE KBUILD_RUSTFLAGS_MODULE KBUILD_LDFLAGS_MODULE
-export KBUILD_AFLAGS_KERNEL KBUILD_CFLAGS_KERNEL KBUILD_RUSTFLAGS_KERNEL
+export KBUILD_AFLAGS_MODULE KBUILD_CFLAGS_MODULE KBUILD_LDFLAGS_MODULE
+export KBUILD_AFLAGS_KERNEL KBUILD_CFLAGS_KERNEL
 
 # Files to ignore in find ... statements
 
@@ -723,11 +648,10 @@ endif
 
 # The expansion should be delayed until arch/$(SRCARCH)/Makefile is included.
 # Some architectures define CROSS_COMPILE in arch/$(SRCARCH)/Makefile.
-# CC_VERSION_TEXT, RUSTC_VERSION_TEXT and PAHOLE_VERSION are referenced from
+# CC_VERSION_TEXT, and PAHOLE_VERSION are referenced from
 # Kconfig (so they need export), and from include/config/auto.conf.cmd to
 # detect the version changes between builds.
 CC_VERSION_TEXT = $(subst $(pound),,$(shell LC_ALL=C $(CC) --version 2>/dev/null | head -n 1))
-RUSTC_VERSION_TEXT = $(subst $(pound),,$(shell $(RUSTC) --version 2>/dev/null))
 PAHOLE_VERSION = $(shell $(srctree)/scripts/pahole-version.sh $(PAHOLE))
 
 ifneq ($(findstring clang,$(CC_VERSION_TEXT)),)
@@ -749,7 +673,7 @@ ifdef config-build
 # KBUILD_DEFCONFIG may point out an alternative default configuration
 # used for 'make defconfig'
 include $(srctree)/arch/$(SRCARCH)/Makefile
-export KBUILD_DEFCONFIG KBUILD_KCONFIG CC_VERSION_TEXT RUSTC_VERSION_TEXT PAHOLE_VERSION
+export KBUILD_DEFCONFIG KBUILD_KCONFIG CC_VERSION_TEXT PAHOLE_VERSION
 
 config: outputmakefile scripts_basic FORCE
 	$(Q)$(MAKE) $(build)=scripts/kconfig $@
@@ -857,20 +781,6 @@ endif # CONFIG_TRACEPOINTS
 
 export WARN_ON_UNUSED_TRACEPOINTS
 
-# Per-version Rust flags. These are like `rust_common_flags`, but may
-# depend on the Rust compiler version (e.g. using `rustc-min-version`).
-#
-# `-Aclippy::precedence`: the lint was extended in Rust 1.85.0 to
-# include bitmasking and shift operations. However, because it generated
-# many hits, in Rust 1.86.0 it was split into a new `precedence_bits`
-# lint which is not enabled by default.
-rust_common_flags_per_version := \
-    $(if $(call rustc-min-version,108600),,-Aclippy::precedence)
-
-rust_common_flags += $(rust_common_flags_per_version)
-KBUILD_HOSTRUSTFLAGS += $(rust_common_flags_per_version) $(HOSTRUSTFLAGS)
-KBUILD_RUSTFLAGS += $(rust_common_flags_per_version)
-
 include $(srctree)/arch/$(SRCARCH)/Makefile
 
 ifdef need-config
@@ -899,7 +809,7 @@ $(KCONFIG_CONFIG):
 #
 # Do not use $(call cmd,...) here. That would suppress prompts from syncconfig,
 # so you cannot notice that Kconfig is waiting for the user input.
-%/config/auto.conf %/config/auto.conf.cmd %/generated/autoconf.h %/generated/rustc_cfg: $(KCONFIG_CONFIG)
+%/config/auto.conf %/config/auto.conf.cmd %/generated/autoconf.h: $(KCONFIG_CONFIG)
 	$(Q)$(kecho) "  SYNC    $@"
 	$(Q)$(MAKE) -f $(srctree)/Makefile syncconfig
 else # !may-sync-config
@@ -907,7 +817,7 @@ else # !may-sync-config
 # and include/config/auto.conf but do not care if they are up-to-date.
 # Use auto.conf to show the error message
 
-checked-configs := $(addprefix $(objtree)/, include/generated/autoconf.h include/generated/rustc_cfg include/config/auto.conf)
+checked-configs := $(addprefix $(objtree)/, include/generated/autoconf.h include/config/auto.conf)
 missing-configs := $(filter-out $(wildcard $(checked-configs)), $(checked-configs))
 
 ifdef missing-configs
@@ -929,16 +839,9 @@ KBUILD_CFLAGS	+= -fno-delete-null-pointer-checks
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE
 KBUILD_CFLAGS += -O2
-KBUILD_RUSTFLAGS += -Copt-level=2
 else ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS += -Os
-KBUILD_RUSTFLAGS += -Copt-level=s
 endif
-
-# Always set `debug-assertions` and `overflow-checks` because their default
-# depends on `opt-level` and `debug-assertions`, respectively.
-KBUILD_RUSTFLAGS += -Cdebug-assertions=$(if $(CONFIG_RUST_DEBUG_ASSERTIONS),y,n)
-KBUILD_RUSTFLAGS += -Coverflow-checks=$(if $(CONFIG_RUST_OVERFLOW_CHECKS),y,n)
 
 # Tell gcc to never replace conditional load with a non-conditional one
 ifdef CONFIG_CC_IS_GCC
@@ -964,15 +867,12 @@ KBUILD_CFLAGS += $(stackp-flags-y)
 
 ifdef CONFIG_FRAME_POINTER
 KBUILD_CFLAGS	+= -fno-omit-frame-pointer -fno-optimize-sibling-calls
-KBUILD_RUSTFLAGS += -Cforce-frame-pointers=y
 else
 # Some targets (ARM with Thumb2, for example), can't be built with frame
 # pointers.  For those, we don't have FUNCTION_TRACER automatically
 # select FRAME_POINTER.  However, FUNCTION_TRACER adds -pg, and this is
 # incompatible with -fomit-frame-pointer with current GCC, so we don't use
 # -fomit-frame-pointer with FUNCTION_TRACER.
-# In the Rust target specification, "frame-pointer" is set explicitly
-# to "may-omit".
 ifndef CONFIG_FUNCTION_TRACER
 KBUILD_CFLAGS	+= -fomit-frame-pointer
 endif
@@ -1057,10 +957,8 @@ ifdef CONFIG_DEBUG_SECTION_MISMATCH
 KBUILD_CFLAGS += -fno-inline-functions-called-once
 endif
 
-# `rustc`'s `-Zfunction-sections` applies to data too (as of 1.59.0).
 ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
 KBUILD_CFLAGS_KERNEL += -ffunction-sections -fdata-sections
-KBUILD_RUSTFLAGS_KERNEL += -Zfunction-sections=y
 LDFLAGS_vmlinux += --gc-sections
 endif
 
@@ -1068,7 +966,6 @@ ifdef CONFIG_SHADOW_CALL_STACK
 ifndef CONFIG_DYNAMIC_SCS
 CC_FLAGS_SCS	:= -fsanitize=shadow-call-stack
 KBUILD_CFLAGS	+= $(CC_FLAGS_SCS)
-KBUILD_RUSTFLAGS += -Zsanitizer=shadow-call-stack
 endif
 export CC_FLAGS_SCS
 endif
@@ -1099,13 +996,6 @@ ifdef CONFIG_CFI_ICALL_NORMALIZE_INTEGERS
 endif
 ifdef CONFIG_FINEIBT_BHI
 	CC_FLAGS_CFI	+= -fsanitize-kcfi-arity
-endif
-ifdef CONFIG_RUST
-	# Always pass -Zsanitizer-cfi-normalize-integers as CONFIG_RUST selects
-	# CONFIG_CFI_ICALL_NORMALIZE_INTEGERS.
-	RUSTC_FLAGS_CFI   := -Zsanitizer=kcfi -Zsanitizer-cfi-normalize-integers
-	KBUILD_RUSTFLAGS += $(RUSTC_FLAGS_CFI)
-	export RUSTC_FLAGS_CFI
 endif
 KBUILD_CFLAGS	+= $(CC_FLAGS_CFI)
 export CC_FLAGS_CFI
@@ -1153,9 +1043,6 @@ KBUILD_CFLAGS += -fno-builtin-wcslen
 # change __FILE__ to the relative path to the source directory
 ifdef building_out_of_srctree
 KBUILD_CPPFLAGS += -fmacro-prefix-map=$(srcroot)/=
-ifeq ($(call rustc-option-yn, --remap-path-scope=macro),y)
-KBUILD_RUSTFLAGS += --remap-path-prefix=$(srcroot)/= --remap-path-scope=macro
-endif
 endif
 
 # include additional Makefiles when needed
@@ -1180,11 +1067,10 @@ include $(addprefix $(srctree)/, $(include-y))
 # Do not add $(call cc-option,...) below this line. When you build the kernel
 # from the clean source tree, the GCC plugins do not exist at this point.
 
-# Add user supplied CPPFLAGS, AFLAGS, CFLAGS and RUSTFLAGS as the last assignments
+# Add user supplied CPPFLAGS, AFLAGS and CFLAGS as the last assignments
 KBUILD_CPPFLAGS += $(KCPPFLAGS)
 KBUILD_AFLAGS   += $(KAFLAGS)
 KBUILD_CFLAGS   += $(KCFLAGS)
-KBUILD_RUSTFLAGS += $(KRUSTFLAGS)
 
 KBUILD_LDFLAGS_MODULE += --build-id=sha1
 LDFLAGS_vmlinux += --build-id=sha1
@@ -1369,7 +1255,7 @@ PHONY += prepare archprepare
 archprepare: outputmakefile archheaders archscripts scripts include/config/kernel.release \
 	asm-generic $(version_h) include/generated/utsrelease.h \
 	include/generated/compile.h include/generated/autoconf.h \
-	include/generated/rustc_cfg remove-stale-files
+	remove-stale-files
 
 prepare0: archprepare
 	$(Q)$(MAKE) $(build)=scripts/mod
@@ -1377,10 +1263,6 @@ prepare0: archprepare
 
 # All the preparing..
 prepare: prepare0
-ifdef CONFIG_RUST
-	+$(Q)$(CONFIG_SHELL) $(srctree)/scripts/rust_is_available.sh
-	$(Q)$(MAKE) $(build)=rust
-endif
 
 PHONY += remove-stale-files
 remove-stale-files:
@@ -1691,8 +1573,7 @@ endif # CONFIG_MODULES
 CLEAN_FILES += vmlinux.symvers modules-only.symvers \
 	       modules.builtin modules.builtin.modinfo modules.nsdeps \
 	       modules.builtin.ranges vmlinux.o.map vmlinux.unstripped \
-	       compile_commands.json rust/test \
-	       rust-project.json .vmlinux.objs .vmlinux.export.c \
+	       compile_commands.json .vmlinux.objs .vmlinux.export.c \
                .builtin-dtbs-list .builtin-dtbs.S
 
 # Directories & files removed with 'make mrproper'
@@ -1704,9 +1585,7 @@ MRPROPER_FILES += include/config include/generated          \
 		  certs/signing_key.pem \
 		  certs/x509.genkey \
 		  vmlinux-gdb.py \
-		  rpmbuild \
-		  rust/libmacros.so rust/libmacros.dylib \
-		  rust/libpin_init_internal.so rust/libpin_init_internal.dylib
+		  rpmbuild
 
 # clean - Delete most, but leave enough to build external modules
 #
@@ -1824,24 +1703,6 @@ help:
 	@echo  '  kselftest-merge   - Merge all the config dependencies of'
 	@echo  '		      kselftest to existing .config.'
 	@echo  ''
-	@echo  'Rust targets:'
-	@echo  '  rustavailable   - Checks whether the Rust toolchain is'
-	@echo  '		    available and, if not, explains why.'
-	@echo  '  rustfmt	  - Reformat all the Rust code in the kernel'
-	@echo  '  rustfmtcheck	  - Checks if all the Rust code in the kernel'
-	@echo  '		    is formatted, printing a diff otherwise.'
-	@echo  '  rustdoc	  - Generate Rust documentation'
-	@echo  '		    (requires kernel .config)'
-	@echo  '  rusttest        - Runs the Rust tests'
-	@echo  '                    (requires kernel .config; downloads external repos)'
-	@echo  '  rust-analyzer	  - Generate rust-project.json rust-analyzer support file'
-	@echo  '		    (requires kernel .config)'
-	@echo  '  dir/file.[os]   - Build specified target only'
-	@echo  '  dir/file.rsi    - Build macro expanded source, similar to C preprocessing.'
-	@echo  '                    Run with RUSTFMT=n to skip reformatting if needed.'
-	@echo  '                    The output is not intended to be compilable.'
-	@echo  '  dir/file.ll     - Build the LLVM assembly file'
-	@echo  ''
 	@$(if $(dtstree), \
 		echo 'Devicetree:'; \
 		echo '* dtbs               - Build device tree blobs for enabled boards'; \
@@ -1925,45 +1786,6 @@ PHONY += $(DOC_TARGETS)
 $(DOC_TARGETS):
 	$(Q)$(MAKE) $(build)=Documentation $@
 
-
-# Rust targets
-# ---------------------------------------------------------------------------
-
-# "Is Rust available?" target
-PHONY += rustavailable
-rustavailable:
-	+$(Q)$(CONFIG_SHELL) $(srctree)/scripts/rust_is_available.sh && echo "Rust is available!"
-
-# Documentation target
-#
-# Using the singular to avoid running afoul of `no-dot-config-targets`.
-PHONY += rustdoc
-rustdoc: prepare
-	$(Q)$(MAKE) $(build)=rust $@
-
-# Testing target
-PHONY += rusttest
-rusttest: prepare
-	$(Q)$(MAKE) $(build)=rust $@
-
-# Formatting targets
-#
-# Generated files as well as vendored crates are skipped.
-PHONY += rustfmt rustfmtcheck
-
-rustfmt:
-	$(Q)find $(srctree) $(RCS_FIND_IGNORE) \
-		\( \
-			-path $(srctree)/rust/proc-macro2 \
-			-o -path $(srctree)/rust/quote \
-			-o -path $(srctree)/rust/syn \
-		\) -prune -o \
-		-type f -a -name '*.rs' -a ! -name '*generated*' -print \
-		| xargs $(RUSTFMT) $(rustfmt_flags)
-
-rustfmtcheck: rustfmt_flags = --check
-rustfmtcheck: rustfmt
-
 # Misc
 # ---------------------------------------------------------------------------
 
@@ -2026,7 +1848,6 @@ help:
 	@echo  '  modules         - default target, build the module(s)'
 	@echo  '  modules_install - install the module'
 	@echo  '  clean           - remove generated files in module directory only'
-	@echo  '  rust-analyzer	  - generate rust-project.json rust-analyzer support file'
 	@echo  ''
 
 ifndef CONFIG_MODULES
@@ -2176,19 +1997,6 @@ quiet_cmd_tags = GEN     $@
 
 tags TAGS cscope gtags: FORCE
 	$(call cmd,tags)
-
-# Generate rust-project.json (a file that describes the structure of non-Cargo
-# Rust projects) for rust-analyzer (an implementation of the Language Server
-# Protocol).
-PHONY += rust-analyzer
-rust-analyzer:
-	+$(Q)$(CONFIG_SHELL) $(srctree)/scripts/rust_is_available.sh
-ifdef KBUILD_EXTMOD
-# FIXME: external modules must not descend into a sub-directory of the kernel
-	$(Q)$(MAKE) $(build)=$(objtree)/rust src=$(srctree)/rust $@
-else
-	$(Q)$(MAKE) $(build)=rust $@
-endif
 
 # Script to generate missing namespace dependencies
 # ---------------------------------------------------------------------------

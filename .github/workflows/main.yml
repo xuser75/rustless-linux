@@ -1,0 +1,89 @@
+name: Kernel De-Rust & .deb Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for running'
+        required: false
+        default: 'Manual trigger'
+
+jobs:
+  build-debian-packages:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+
+      - name: Maximize Disk Space
+        run: |
+          echo "Before cleanup:"
+          df -h .
+          
+          # Remove Android SDK, NDK, and .NET Runtimes
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          
+          # Optional: Remove other heavy hitters if needed
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo apt-get clean
+          
+          echo "After cleanup:"
+          df -h .
+
+      - name: Install Build & Packaging Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc bison flex libelf-dev libssl-dev make gcc \
+            libc6-dev binutils dwarves kmod rsync \
+            debhelper fakeroot python3-minimal \
+            build-essential libdw-dev
+
+      - name: Verify Rust Directory Removal
+        run: |
+          if [ -d "rust" ]; then
+            echo "Error: rust/ directory still exists!"
+            exit 1
+          fi
+
+      - name: Configure and Set Version
+        run: |
+          cp debian_config .config
+          
+          # Disable Trusted Keys
+          scripts/config --set-str SYSTEM_TRUSTED_KEYS ""
+          scripts/config --set-str SYSTEM_REVOCATION_KEYS ""
+          
+          # De-Rust and Versioning
+          scripts/config --disable RUST
+          scripts/config --set-str LOCALVERSION "-rustless"
+          
+          # Explicitly enable module stripping in the config
+          scripts/config --enable MODULE_ALLOW_MISSING_WEB_SIGNATURES
+          
+          # Finalize the configuration
+          make olddefconfig
+
+      - name: Build Debian Packages
+        run: |
+          make -j$(nproc) bindeb-pkg
+
+      - name: Move Packages for Upload
+        run: |
+          mv ../*.deb .
+          echo "Files to be uploaded:"
+          ls -lh *.deb
+
+      - name: Upload .deb Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-kernel-rustless-deb
+          path: ./*.deb
+          if-no-files-found: error

@@ -106,7 +106,6 @@ obj-y			+= security/
 obj-y			+= crypto/
 obj-$(CONFIG_BLOCK)	+= block/
 obj-$(CONFIG_IO_URING)	+= io_uring/
-obj-$(CONFIG_RUST)	+= rust/
 obj-y			+= $(ARCH_LIB)
 obj-y			+= drivers/
 obj-y			+= sound/

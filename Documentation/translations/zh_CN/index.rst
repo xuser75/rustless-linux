@@ -74,7 +74,6 @@
    dev-tools/index
    dev-tools/testing-overview
    kernel-hacking/index
-   rust/index
 
 TODOList:
 

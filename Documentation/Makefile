@@ -23,7 +23,6 @@ SPHINXOPTS    =
 SPHINXDIRS    = .
 DOCS_THEME    =
 DOCS_CSS      =
-RUSTDOC       =
 PAPER         =
 BUILDDIR      = $(obj)/output
 PDFLATEX      = xelatex
@@ -58,7 +57,7 @@ htmldocs mandocs infodocs texinfodocs latexdocs epubdocs xmldocs pdfdocs linkche
 		$(srctree)/tools/docs/sphinx-pre-install --version-check
 	+$(Q)PYTHONPYCACHEPREFIX="$(PYTHONPYCACHEPREFIX)" \
 		$(PYTHON3) $(BUILD_WRAPPER) $@ \
-		--sphinxdirs="$(SPHINXDIRS)" $(RUSTDOC) \
+		--sphinxdirs="$(SPHINXDIRS)" \
 		--builddir="$(BUILDDIR)" --deny-vf=$(FONTS_CONF_DENY_VF) \
 		--theme=$(DOCS_THEME) --css=$(DOCS_CSS) --paper=$(PAPER)
 
