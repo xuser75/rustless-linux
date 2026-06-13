@@ -104,7 +104,6 @@ TARGETS += riscv
 TARGETS += rlimits
 TARGETS += rseq
 TARGETS += rtc
-TARGETS += rust
 TARGETS += sched_ext
 TARGETS += seccomp
 TARGETS += sgx
