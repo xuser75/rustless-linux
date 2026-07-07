@@ -98,17 +98,6 @@ config DRM_PANIC_SCREEN
 	  or by writing to /sys/module/drm/parameters/panic_screen sysfs entry
 	  Default is "user"
 
-config DRM_PANIC_SCREEN_QR_CODE
-	bool "Add a panic screen with a QR code"
-	depends on DRM_PANIC && RUST
-	select ZLIB_DEFLATE
-	help
-	  This option adds a QR code generator, and a panic screen with a QR
-	  code. The QR code will contain the last lines of kmsg and other debug
-	  information. This should be easier for the user to report a kernel
-	  panic, with all debug information available.
-	  To use this panic screen, also set DRM_PANIC_SCREEN to "qr_code"
-
 config DRM_PANIC_SCREEN_QR_CODE_URL
 	string "Base URL of the QR code in the panic screen"
 	depends on DRM_PANIC_SCREEN_QR_CODE
@@ -218,13 +207,6 @@ config DRM_GPUVM
 	  GPU-VM representation providing helpers to manage a GPUs virtual
 	  address space
 
-config RUST_DRM_GPUVM
-	bool
-	depends on DRM
-	select DRM_GPUVM
-	help
-	  Choose this if you need GPUVM functions in Rust
-
 config DRM_GPUSVM
 	tristate
 	depends on DRM
@@ -275,12 +257,6 @@ config DRM_GEM_SHMEM_HELPER
 	help
 	  Choose this if you need the GEM shmem helper functions
 
-config RUST_DRM_GEM_SHMEM_HELPER
-	bool
-	depends on DRM && MMU
-	select DRM_GEM_SHMEM_HELPER
-	help
-	  Choose this if you need the GEM shmem helper functions In Rust
 
 config DRM_SUBALLOC_HELPER
 	tristate
@@ -329,7 +305,6 @@ source "drivers/gpu/drm/mgag200/Kconfig"
 source "drivers/gpu/drm/msm/Kconfig"
 source "drivers/gpu/drm/mxsfb/Kconfig"
 source "drivers/gpu/drm/nouveau/Kconfig"
-source "drivers/gpu/drm/nova/Kconfig"
 source "drivers/gpu/drm/omapdrm/Kconfig"
 source "drivers/gpu/drm/panel/Kconfig"
 source "drivers/gpu/drm/panfrost/Kconfig"
@@ -351,7 +326,6 @@ source "drivers/gpu/drm/tidss/Kconfig"
 source "drivers/gpu/drm/tilcdc/Kconfig"
 source "drivers/gpu/drm/tiny/Kconfig"
 source "drivers/gpu/drm/tve200/Kconfig"
-source "drivers/gpu/drm/tyr/Kconfig"
 source "drivers/gpu/drm/udl/Kconfig"
 source "drivers/gpu/drm/v3d/Kconfig"
 source "drivers/gpu/drm/vboxvideo/Kconfig"

@@ -9,20 +9,10 @@ hostprogs-always-$(CONFIG_BUILDTIME_TABLE_SORT)		+= sorttable
 hostprogs-always-$(CONFIG_ASN1)				+= asn1_compiler
 hostprogs-always-$(CONFIG_MODULE_SIG_FORMAT)		+= sign-file
 hostprogs-always-$(CONFIG_SYSTEM_EXTRA_CERTIFICATE)	+= insert-sys-cert
-hostprogs-always-$(CONFIG_RUST_KERNEL_DOCTESTS)		+= rustdoc_test_builder
-hostprogs-always-$(CONFIG_RUST_KERNEL_DOCTESTS)		+= rustdoc_test_gen
 hostprogs-always-$(CONFIG_TRACEPOINTS)			+= tracepoint-update
 
 sorttable-objs := sorttable.o elf-parse.o
 tracepoint-update-objs := tracepoint-update.o elf-parse.o
-
-ifneq ($(or $(CONFIG_X86_64),$(CONFIG_X86_32)),)
-always-$(CONFIG_RUST)					+= target.json
-filechk_rust_target = $< < include/config/auto.conf
-
-$(obj)/target.json: scripts/generate_rust_target include/config/auto.conf FORCE
-	$(call filechk,rust_target)
-endif
 
 hostprogs += generate_rust_target
 generate_rust_target-rust := y
